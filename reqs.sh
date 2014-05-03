@@ -7,7 +7,7 @@ fi
 
 # install system packages
 sudo apt-get install bison libportaudio2 libportaudio19-dev gfortran
-pip install pyaudio
+pip install pyaudio pywit
 
 # get homebrew
 BREW="$VIRTUAL_ENV/linuxbrew"
