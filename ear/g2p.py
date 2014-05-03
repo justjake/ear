@@ -2,10 +2,10 @@ import os
 import subprocess
 import re
 
-from config import data_path, G014B2B_FST
+from config import data_path, tmp_path, G014B2B_FST
 
 
-TEMP_FILENAME = "g2ptemp"
+TEMP_FILENAME = tmp_path('g2ptemp')
 PHONE_MATCH = re.compile(r'<s> (.*) </s>')
 
 
@@ -40,8 +40,8 @@ def translateFile(input_filename, output_filename=None):
     """
     Translates a text file of sentences into a dictionary.
     """
-    out = subprocess.check_output(['phonetisaurus-g2p', '--model=%s' % (G014B2B_FST), 
-            '--input=%s' % input_filename, '--words', '--isfile'])
+    out = subprocess.check_output(['phonetisaurus-g2p', '--model=%s' % (G014B2B_FST),
+            '--input=%s' % (input_filename), '--words', '--isfile'])
     out = parseOutput(out)
 
     if output_filename:

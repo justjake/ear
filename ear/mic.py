@@ -1,5 +1,9 @@
 """
-    The Mic class handles all interactions with the microphone and speaker.
+The Mic class handles all interactions with the microphone and speaker.
+
+TODO: rewrite routines to avoid writing files to disk
+TODO: use StringIO() instead of temp files
+TODO: pass around file-like objects
 """
 
 import os
@@ -7,7 +11,18 @@ import json
 from wave import open as open_audio
 import audioop
 import pyaudio
+
+from config import HM_DIR, data_path
 import alteration
+
+THRESHOLD_MULTIPLIER = 1.8
+PASSIVE_AUDIO_FILE = data_path("passive.wav")
+ACTIVE_AUDIO_FILE = data_path("active.wav")
+RATE = 16000
+CHUNK = 1024
+
+# number of seconds to allow to establish threshold
+THRESHOLD_TIME = 1
 
 
 # quirky bug where first import doesn't work
@@ -33,7 +48,8 @@ class Mic:
             dictd_persona -- filename of the 'Persona' dictionary (.dic)
         """
 
-        hmdir = "/usr/local/share/pocketsphinx/model/hmm/en_US/hub4wsj_sc_8k"
+        # hmdir = "/usr/local/share/pocketsphinx/model/hmm/en_US/hub4wsj_sc_8k"
+        hmdir = HM_DIR
 
         if lmd_music and dictd_music:
             self.speechRec_music = ps.Decoder(hmm = hmdir, lm = lmd_music, dict = dictd_music)
@@ -76,17 +92,6 @@ class Mic:
         return score
 
     def fetchThreshold(self):
-
-        # TODO: Consolidate all of these variables from the next three
-        # functions
-        THRESHOLD_MULTIPLIER = 1.8
-        AUDIO_FILE = "passive.wav"
-        RATE = 16000
-        CHUNK = 1024
-
-        # number of seconds to allow to establish threshold
-        THRESHOLD_TIME = 1
-
         # number of seconds to listen before forcing restart
         LISTEN_TIME = 10
 
@@ -127,12 +132,7 @@ class Mic:
         """
 
         THRESHOLD_MULTIPLIER = 1.8
-        AUDIO_FILE = "passive.wav"
-        RATE = 16000
-        CHUNK = 1024
-
-        # number of seconds to allow to establish threshold
-        THRESHOLD_TIME = 1
+        AUDIO_FILE = PASSIVE_AUDIO_FILE
 
         # number of seconds to listen before forcing restart
         LISTEN_TIME = 10
@@ -216,14 +216,12 @@ class Mic:
 
         return (False, transcribed)
 
-    def activeListen(self, THRESHOLD=None, LISTEN=True, MUSIC=False):
+    def activeListenFile(self, THRESHOLD=None, LISTEN=True, MUSIC=False):
         """
             Records until a second of silence or times out after 12 seconds
         """
 
-        AUDIO_FILE = "active.wav"
-        RATE = 16000
-        CHUNK = 1024
+        AUDIO_FILE = ACTIVE_AUDIO_FILE
         LISTEN_TIME = 12
 
         # user can request pre-recorded sound
@@ -280,14 +278,23 @@ class Mic:
         write_frames.writeframes(''.join(frames))
         write_frames.close()
 
+        return AUDIO_FILE
+
+
+    def activeListen(self, THRESHOLD=None, LISTEN=True, MUSIC=False):
+        AUDIO_FILE = activeListenFile(THRESHOLD, LISTEN, MUSIC)
         # DO SOME AMPLIFICATION
         # os.system("sox "+AUDIO_FILE+" temp.wav vol 20dB")
+
+        if not AUDIO_FILE:
+            return None
 
         if MUSIC:
             return self.transcribe(AUDIO_FILE, MUSIC=True)
 
         return self.transcribe(AUDIO_FILE)
-        
+
+
     def say(self, phrase, OPTIONS=" -vdefault+m3 -p 40 -s 160 --stdout > say.wav"):
         # alter phrase before speaking
         phrase = alteration.clean(phrase)
